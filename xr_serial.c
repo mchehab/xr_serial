@@ -99,6 +99,7 @@ struct xr_txrx_clk_mask {
 #define VIA_CDC_REGISTER		-1
 
 enum xr_model {
+	XR2280X,
 	XR21B1411,
 	XR21V141X,
 	XR21B142X,
@@ -133,6 +134,30 @@ enum xr_hal_type {
 };
 
 static const int xr_hal_table[MAX_XR_MODELS][MAX_XR_HAL_TYPE] = {
+	[XR2280X] = {
+		[REG_ENABLE] =				0x40,
+		[REG_FORMAT] =				0x45,
+		[REG_FLOW_CTRL] =			0x46,
+		[REG_XON_CHAR] =			0x47,
+		[REG_XOFF_CHAR] =			0x48,
+		[REG_TX_BREAK] =			0x4a,
+		[REG_RS485_DELAY] =			0x4b,
+		[REG_GPIO_MODE] =			0x4c,
+		[REG_GPIO_DIR] =			0x4d,
+		[REG_GPIO_SET] =			0x4e,
+		[REG_GPIO_CLR] =			0x4f,
+		[REG_GPIO_STATUS] =			0x50,
+		[REG_GPIO_INT_MASK] =			0x51,
+		[REG_CUSTOMIZED_INT] =			0x52,
+		[REG_GPIO_PULL_UP_ENABLE] =		0x54,
+		[REG_GPIO_PULL_DOWN_ENABLE] =		0x55,
+		[REG_LOOPBACK] =			0x56,
+		[REG_LOW_LATENCY] =			0x66,
+		[REG_CUSTOM_DRIVER] =			0x81,
+
+		[REQ_SET] =				5,
+		[REQ_GET] =				5,
+	},
 	[XR21B1411] = {
 		[REG_ENABLE] =				0xc00,
 		[REG_FORMAT] =				VIA_CDC_REGISTER,
@@ -215,6 +240,7 @@ static int xr_set_reg(struct usb_serial_port *port, u8 block, u8 reg, u8 val)
 	int ret;
 
 	switch (port_priv->model) {
+	case XR2280X:
 	case XR21B1411:
 		break;
 	case XR21V141X:
@@ -253,6 +279,7 @@ static int xr_get_reg(struct usb_serial_port *port, u8 block, u8 reg, u8 *val)
 		return -ENOMEM;
 
 	switch (port_priv->model) {
+	case XR2280X:
 	case XR21B1411:
 		break;
 	case XR21V141X:
@@ -902,6 +929,11 @@ static void xr_disconnect(struct usb_serial *serial)
 }
 
 static const struct usb_device_id id_table[] = {
+	{ USB_DEVICE(0x04e2, 0x1400), .driver_info = XR2280X},
+	{ USB_DEVICE(0x04e2, 0x1401), .driver_info = XR2280X},
+	{ USB_DEVICE(0x04e2, 0x1402), .driver_info = XR2280X},
+	{ USB_DEVICE(0x04e2, 0x1403), .driver_info = XR2280X},
+
 	{ USB_DEVICE(0x04e2, 0x1410), .driver_info = XR21V141X},
 	{ USB_DEVICE(0x04e2, 0x1411), .driver_info = XR21B1411},
 	{ USB_DEVICE(0x04e2, 0x1412), .driver_info = XR21V141X},
