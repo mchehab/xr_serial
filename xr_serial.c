@@ -145,6 +145,7 @@ static const int xr_hal_table[MAX_XR_MODELS][MAX_XR_HAL_TYPE] = {
 
 struct xr_port_private {
 	enum xr_model model;
+	unsigned int channel;
 };
 
 static int xr_set_reg(struct usb_serial_port *port, u8 block, u8 reg, u8 val)
@@ -153,6 +154,14 @@ static int xr_set_reg(struct usb_serial_port *port, u8 block, u8 reg, u8 val)
 	struct usb_serial *serial = port->serial;
 	int ret;
 
+	switch (port_priv->model) {
+	case XR21V141X:
+		if (port_priv->channel)
+			reg |= (port_priv->channel - 1) << 8;
+		break;
+	default:
+		return -EINVAL;
+	};
 	ret = usb_control_msg(serial->dev,
 			      usb_sndctrlpipe(serial->dev, 0),
 			      xr_hal_table[port_priv->model][REQ_SET],
@@ -178,6 +187,14 @@ static int xr_get_reg(struct usb_serial_port *port, u8 block, u8 reg, u8 *val)
 	if (!dmabuf)
 		return -ENOMEM;
 
+	switch (port_priv->model) {
+	case XR21V141X:
+		if (port_priv->channel)
+			reg |= (port_priv->channel - 1) << 8;
+		break;
+	default:
+		return -EINVAL;
+	};
 	ret = usb_control_msg(serial->dev,
 			      usb_rcvctrlpipe(serial->dev, 0),
 			      xr_hal_table[port_priv->model][REQ_GET],
@@ -601,17 +618,24 @@ static void xr_close(struct usb_serial_port *port)
 
 static int xr_probe(struct usb_serial *serial, const struct usb_device_id *id)
 {
+	struct usb_interface *intf = serial->interface;
+	struct usb_endpoint_descriptor *data_ep;
 	struct xr_port_private *port_priv;
+	int ifnum;
 
-	/* Don't bind to control interface */
-	if (serial->interface->cur_altsetting->desc.bInterfaceNumber == 0)
+	/* Attach only data interfaces */
+	ifnum = intf->cur_altsetting->desc.bInterfaceNumber;
+	if (!(ifnum % 2))
 		return -ENODEV;
 
 	port_priv = kzalloc(sizeof(*port_priv), GFP_KERNEL);
 	if (!port_priv)
 		return -ENOMEM;
 
+	data_ep = &intf->cur_altsetting->endpoint[0].desc;
+
 	port_priv->model = id->driver_info;
+	port_priv->channel = data_ep->bEndpointAddress;
 
 	usb_set_serial_data(serial, port_priv);
 
@@ -628,6 +652,8 @@ static void xr_disconnect(struct usb_serial *serial)
 
 static const struct usb_device_id id_table[] = {
 	{ USB_DEVICE(0x04e2, 0x1410), .driver_info = XR21V141X},
+	{ USB_DEVICE(0x04e2, 0x1412), .driver_info = XR21V141X},
+	{ USB_DEVICE(0x04e2, 0x1414), .driver_info = XR21V141X},
 	{ }
 };
 MODULE_DEVICE_TABLE(usb, id_table);
